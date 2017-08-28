@@ -124,21 +124,27 @@ int sel_to_tess(int sel_value)
 
 int reg_get_value(HKEY key, char *name)
 {
-	wchar_t buf[16] = {0};
-	DWORD len = sizeof(wchar_t) * 16;
+	char buf[16] = {0};
+	DWORD len = 16;
 
 	if(RegQueryValueExA(key, name, 0, 0, (void*)buf, &len) == ERROR_SUCCESS)
 	{
-		wchar_t *str = buf;
+		char *str = buf;
 		int val  = 0;
 		int sign = 0;
 
 		while(len--)
 		{
-			if(*str == 0x2D) sign = 1;
-			else if(*str >= 0x30 && *str <= 0x39)
-				val = val * 10 + (*str - 0x30);
-			str++;
+			char c = *str++;
+
+			if(c == 0x2D)
+			{
+				sign = 1;
+			}
+			else if(c >= 0x30 && c <= 0x39)
+			{
+				val = val * 10 + (c - 0x30);
+			}
 		}
 
 		return sign ? -val : val;
@@ -152,8 +158,16 @@ int reg_get_value(HKEY key, char *name)
 void reg_set_value(HKEY key, char *name, int val)
 {
 	char buf[16];
-	int len = wsprintf(buf, "%d", val);
-	RegSetValueExA(key, name, 0, REG_SZ, buf, len + 1);
+	int len = wsprintfA(buf, "%d", val);
+	int tmp = len;
+
+	while(tmp--)
+	{
+		buf[tmp * 2]     = buf[tmp];
+		buf[tmp * 2 + 1] = 0;
+	}
+
+	RegSetValueExA(key, name, 0, REG_BINARY, buf, len * 2);
 }
 
 LONG load_settings(void)
